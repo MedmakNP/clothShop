@@ -1,0 +1,151 @@
+.categoryShop {
+  display: flex;
+  height: 100%;
+  padding-bottom: 80px;
+  transition: 0.5s;
+}
+.blur {
+  filter: blur(2px);
+}
+.container {
+  display: flex;
+  align-items: center;
+  flex-direction: column;
+  width: 1200px;
+  margin: 0px auto;
+}
+.categoryWrap{
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+.title {
+  padding-top: 80px;
+  padding-bottom: 30px;
+  margin-top: 0px;
+  text-align: center;
+}
+.swiper {
+  max-width: 1200px;
+}
+.slideWrap {
+  display: flex;
+  justify-content: center;
+}
+.slide {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 580px;
+  width: 370px;
+  border-radius: 15px;
+  cursor: pointer;
+  transition: 0.8s;
+  border: 1px solid white;
+  margin: 12px;
+}
+.dark {
+  border: 1px solid #505053;
+  background-color: #505053;
+}
+.light {
+  border: 1px solid white;
+  background-color: white;
+}
+.img {
+  height: 550px;
+  width: 340px;
+  border-radius: 15px;
+  transition: 0.8s;
+}
+.slide:hover .img {
+  height: 570px;
+  width: 360px;
+}
+.slide:hover {
+  border: 1px solid #505053;
+  transition: 0.8s;
+}
+.slide:hover .btn {
+  color: #5f6d92;
+}
+.btn {
+  position: absolute;
+  bottom: 9%;
+  height: 50px;
+  width: 200px;
+  font-size: 16px;
+  font-weight: 600;
+  background-color: #f5f5f5;
+  border: 0px;
+  border-radius: 5px;
+  transition: 0.8s;
+  cursor: pointer;
+}
+@media only screen and (max-width: 1200px) {
+  .container {
+    max-width: 900px;
+  }
+  .swiper {
+    max-width: 900px;
+  }
+  .slide {
+    height: 480px;
+    width: 280px;
+    border-radius: 10px;
+  }
+  .img {
+    height: 460px;
+    width: 260px;
+    transition: 0.8s;
+  }
+  .slide:hover .img {
+    height: 470px;
+    width: 270px;
+  }
+}
+@media only screen and (max-width: 900px) {
+  .container {
+    max-width: 700px;
+  }
+  .swiper {
+    max-width: 700px;
+  }
+}
+@media only screen and (max-width: 700px) {
+  .container {
+    max-width: 660px;
+  }
+  .slide{
+    margin: 0;
+  }
+}
+
+@media only screen and (max-width: 460px) {
+  .container {
+    max-width: 90%;
+  }
+  .swiper {
+    max-width: 300px;
+  }
+  .slide {
+    height: 350px;
+    width: 180px;
+    border-radius: 10px;
+  }
+  .img {
+    height: 330px;
+    width: 160px;
+  }
+  .slide:hover .img {
+    height: 340px;
+    width: 170px;
+  }
+  .btn {
+    width: 120px;
+    height: 30px;
+      font-size: 14px;
+  font-weight: 400;
+  }
+}

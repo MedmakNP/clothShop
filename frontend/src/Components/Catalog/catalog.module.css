@@ -1,0 +1,66 @@
+:root{
+  --ink:#2A2724;                  /* темно-сірий текст */
+  --glass:rgba(250,247,243,.82);  /* теплий напівпрозорий фон підпису */
+  --glass-b:#E9E4DC;              /* тонкий бордер */
+  --shadow-s:0 8px 18px rgba(0,0,0,.06);
+  --shadow-m:0 14px 32px rgba(0,0,0,.10);
+  --r-card:18px;
+}
+
+/* Контейнер і грід */
+.wrap{ max-width:1280px; margin:0 auto; padding:24px 20px 40px; }
+.grid{
+  display: grid;
+  gap: 22px;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 320px));
+  justify-content: center; /* ⬅️ центрує колонки в рядку */
+}
+
+/* Картка */
+.card{
+  display:block;
+  background:#fff;
+  border:1px solid rgba(0,0,0,.05);
+  box-shadow:0 6px 16px rgba(0,0,0,.06);
+  overflow:hidden;
+  transition: box-shadow .2s ease; /* без translateY */
+}
+.card:hover{ box-shadow:0 10px 26px rgba(0,0,0,.10); }
+
+/* Фото з єдиним форматом */
+.media{
+  position:relative;
+  aspect-ratio:3/4;
+  background:#F5F2EE;
+}
+.img{
+  position:absolute; inset:0;
+  width:100%; height:100%; object-fit:cover;
+  transform:scale(1);
+  transition:transform .3s ease;
+}
+/* акуратний зум */
+.card:hover .img{ transform:scale(1.025); }
+
+/* нижній градієнт для контрасту підпису */
+.media::after{
+  content:""; position:absolute; left:0; right:0; bottom:0; height:42%;
+  background:linear-gradient(180deg, rgba(0,0,0,0) 0%, rgba(0,0,0,.10) 100%);
+  pointer-events:none;
+}
+
+/* Лейбл — мінімалістичний: без тіні, тонкий бордер, легший шрифт */
+.label{
+  position:absolute; left:14px; bottom:14px;
+  max-width:calc(100% - 28px);
+  padding:6px 10px;
+  background:rgba(255,255,255,.72);           /* нейтральне «скло» */
+  color:#2A2724;
+  font-weight:700; font-size:14px; letter-spacing:.2px;                     /* невелике, не «подушкою» */
+  backdrop-filter: blur(4px) saturate(120%);
+  white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+  box-shadow:none;                             /* прибираємо важкість */
+}
+
+/* якщо хочеш строгий прямокутник: */
+.label.square { border-radius:0; }

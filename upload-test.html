@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="uk">
+<body>
+  <h3>Тест завантаження</h3>
+  <form id="form">
+    <input type="file" name="file" /><br/>
+    <input type="text" name="folder" placeholder="products" value="products" /><br/>
+    <button type="submit">Відправити</button>
+  </form>
+
+  <pre id="out"></pre>
+
+  <script>
+    document.getElementById('form').onsubmit = async (e) => {
+      e.preventDefault();
+      const form = new FormData(e.target);
+      const res = await fetch('http://localhost:3000/upload/image', {
+        method: 'POST',
+        body: form
+      });
+      document.getElementById('out').textContent = await res.text();
+    };
+  </script>
+</body>
+</html>
