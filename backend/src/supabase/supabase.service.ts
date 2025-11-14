@@ -2,6 +2,7 @@
 import { Injectable } from '@nestjs/common';
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
 import { randomUUID } from 'crypto';
+import type { Express } from 'express';
 
 export type UploadOptions = {
   folder?: string; // наприклад 'products' або 'banners'

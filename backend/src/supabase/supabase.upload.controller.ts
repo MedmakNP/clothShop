@@ -8,6 +8,7 @@ import {
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { SupabaseService } from './supabase.service';
+import type { Express } from 'express';
 
 @Controller('upload')
 export class SupabaseUploadController {
