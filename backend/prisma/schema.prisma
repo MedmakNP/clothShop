@@ -54,8 +54,8 @@ model Product {
   isActive    Boolean           @default(true)
   createdAt   DateTime          @default(now())
 
-  categoryId  Int
-  category    Category          @relation(fields: [categoryId], references: [id])
+  categoryId  Int?
+  category    Category?          @relation(fields: [categoryId], references: [id])
 
   variants    ProductVariant[]
   images      ProductImage[]
