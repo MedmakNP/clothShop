@@ -36,7 +36,7 @@ const routerConfig: RouteConfig[] = [
     element: <ContactsPage />,
   },
    {
-    path: "/clothShop/admin",
+    path: "/TechWorld-TypeScript/admin",
     element: <AdminDbPage />,
   },
 ];
