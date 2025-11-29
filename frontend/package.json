@@ -1,8 +1,8 @@
 {
-  "name": "techworldts",
+  "name": "clothshop",
   "version": "0.1.0",
   "private": true,
-  "homepage": "https://medmaknp.github.io/TechWorld-TypeScript",
+  "homepage": "https://MedmakNP.github.io/clothShop",
   "dependencies": {
     "@emotion/react": "^11.11.4",
     "@emotion/styled": "^11.11.5",
@@ -16,7 +16,6 @@
     "@types/react-dom": "^18.3.0",
     "ajv": "^6.12.6",
     "firebase": "^10.12.2",
-    "gh-pages": "^6.1.1",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "react-i18next": "^14.1.1",
@@ -55,6 +54,7 @@
   },
   "devDependencies": {
     "@types/classnames": "^2.3.1",
-    "@types/swiper": "^6.0.0"
+    "@types/swiper": "^6.0.0",
+    "gh-pages": "^6.3.0"
   }
 }

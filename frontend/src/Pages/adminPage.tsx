@@ -1,207 +1,190 @@
-import React, { useMemo, useState } from "react";
+// src/Pages/adminDbPage.tsx
+import React, { useEffect, useMemo, useState } from "react";
 import Header from "../Components/Header/header";
 import HotBar from "../Components/HotBar/hotBar";
 import Footer from "../Components/Footer/footer";
+
+import type { Product } from "../Storage/demoData";
 import {
-  demoProducts as initialDemoProducts,
-  Product,
-  Variant,
-  VariantSize,
-  Size,
-} from "../Storage/demoData";
+  getProducts,
+  createProduct,
+  deleteProductApi,
+} from "../api/products";
+import { apiUploadImage } from "../api/client";
 
-const sizesList: Size[] = ["XS", "S", "M", "L", "XL"];
-
-type VariantDraft = {
-  colorId: string;
-  colorHex: string;
-  sizes: VariantSize[];
+type NewVariant = {
+  sku: string;
+  size: string;
+  color: string;
+  price?: number;
+  stock?: number;
 };
 
-function AdminPage() {
-  const [products, setProducts] = useState<Product[]>(initialDemoProducts);
+function AdminDbPage() {
+  const [products, setProducts] = useState<Product[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
 
-  // Поля форми нового продукту
-  const [title, setTitle] = useState("");
+  // поля форми нового товару
+  const [name, setName] = useState("");
   const [slug, setSlug] = useState("");
-  const [price, setPrice] = useState<string>("");
+  const [basePrice, setBasePrice] = useState<string>("");
+  const [description, setDescription] = useState("");
+  const [categoryName, setCategoryName] = useState("");
   const [imageUrl, setImageUrl] = useState("");
-  const [tagsInput, setTagsInput] = useState("");
+  const [imageFile, setImageFile] = useState<File | null>(null);
 
-  // Чернетки варіантів (кольори + розміри)
-  const [variantDrafts, setVariantDrafts] = useState<VariantDraft[]>([]);
+  // простий список варіантів
+  const [variants, setVariants] = useState<NewVariant[]>([]);
+  const [variantSize, setVariantSize] = useState("M");
+  const [variantColor, setVariantColor] = useState("black");
+  const [variantSku, setVariantSku] = useState("");
+  const [variantPrice, setVariantPrice] = useState<string>("");
+  const [variantStock, setVariantStock] = useState<string>("10");
 
-  // Чернетка для одного розміру всередині активного варіанту
-  const [currentVariantIndex, setCurrentVariantIndex] = useState<number | null>(
-    null
-  );
-  const [sizeValue, setSizeValue] = useState<Size>("M");
-  const [skuValue, setSkuValue] = useState("");
-  const [inStockValue, setInStockValue] = useState(true);
+  // ====== ЗАВАНТАЖЕННЯ СПИСКУ ТОВАРІВ З БЕКЕНДУ ======
+  const reloadProducts = async () => {
+    try {
+      setLoading(true);
+      setErr(null);
+      const data = await getProducts();
+      setProducts(data);
+    } catch (e: any) {
+      console.error(e);
+      setErr(e?.message ?? "Помилка завантаження товарів");
+    } finally {
+      setLoading(false);
+    }
+  };
 
-  // ===== ДОДАЄМО ВАРІАНТ =====
+  useEffect(() => {
+    void reloadProducts();
+  }, []);
+
+  // ====== ДОДАЄМО ВАРІАНТ (size/color/sku) ======
   const addVariant = () => {
-    if (!slug.trim()) {
-      alert("Спочатку заповни slug (для генерації sku).");
+    if (!variantSku.trim()) {
+      alert("Введи SKU для варіанту");
       return;
     }
-    const colorId = window.prompt("ID кольору (наприклад, red, gray):", "");
-    if (!colorId) return;
-
-    const colorHex =
-      window.prompt("Колір HEX (наприклад, #ff0000):", "#ffffff") || "#ffffff";
-
-    setVariantDrafts((prev) => [
+    setVariants((prev) => [
       ...prev,
-      { colorId, colorHex, sizes: [] },
+      {
+        sku: variantSku.trim(),
+        size: variantSize,
+        color: variantColor,
+        price: variantPrice ? Number(variantPrice) : undefined,
+        stock: variantStock ? Number(variantStock) : undefined,
+      },
     ]);
-    setCurrentVariantIndex(variantDrafts.length); // робимо новий активним
+    setVariantSku("");
+    setVariantPrice("");
+    setVariantStock("10");
   };
 
-  // ===== ДОДАЄМО РОЗМІР В АКТИВНИЙ ВАРІАНТ =====
-  const addSizeToCurrentVariant = () => {
-    if (currentVariantIndex == null) {
-      alert("Спочатку створи та обери варіант (колір).");
+  const removeVariant = (sku: string) => {
+    setVariants((prev) => prev.filter((v) => v.sku !== sku));
+  };
+
+  // ====== ЗАВАНТАЖЕННЯ КАРТИНКИ НА СЕРВЕР ======
+  const handleUploadImage = async () => {
+    if (!imageFile) {
+      alert("Обери файл зображення");
       return;
     }
-    if (!skuValue.trim()) {
-      alert("Введи SKU для розміру.");
+    try {
+      setLoading(true);
+      setErr(null);
+      const { url } = await apiUploadImage(imageFile, "products");
+      setImageUrl(url);
+      alert("Зображення завантажене, url вставлено в поле.");
+    } catch (e: any) {
+      console.error(e);
+      setErr(e?.message ?? "Помилка завантаження зображення");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // ====== СТВОРЕННЯ НОВОГО ТОВАРУ В БАЗІ ======
+  const handleCreateProduct = async () => {
+    if (!name.trim() || !slug.trim() || !basePrice.trim()) {
+      alert("Name, slug і price обовʼязкові");
       return;
     }
-
-    setVariantDrafts((prev) =>
-      prev.map((v, i) =>
-        i === currentVariantIndex
-          ? {
-              ...v,
-              sizes: [
-                ...v.sizes,
-                { size: sizeValue, sku: skuValue.trim(), inStock: inStockValue },
-              ],
-            }
-          : v
-      )
-    );
-
-    // очистити локальні поля
-    setSkuValue("");
-    setInStockValue(true);
-  };
-
-  const removeVariant = (index: number) => {
-    setVariantDrafts((prev) => prev.filter((_, i) => i !== index));
-    if (currentVariantIndex === index) {
-      setCurrentVariantIndex(null);
-    }
-  };
-
-  const removeSize = (variantIndex: number, sku: string) => {
-    setVariantDrafts((prev) =>
-      prev.map((v, i) =>
-        i === variantIndex
-          ? { ...v, sizes: v.sizes.filter((s) => s.sku !== sku) }
-          : v
-      )
-    );
-  };
-
-  // ===== ДОДАЄМО ПРОДУКТ =====
-  const addProduct = () => {
-    if (!title.trim() || !slug.trim() || !price.trim()) {
-      alert("Title, slug і price обов'язкові.");
-      return;
-    }
-    if (products.some((p) => p.slug === slug.trim())) {
-      alert("Такий slug вже існує.");
+    const priceNum = Number(basePrice);
+    if (!Number.isFinite(priceNum) || priceNum <= 0) {
+      alert("Price має бути додатнім числом");
       return;
     }
 
-    const numPrice = Number(price);
-    if (Number.isNaN(numPrice) || numPrice <= 0) {
-      alert("Price має бути числом > 0.");
-      return;
+    try {
+      setLoading(true);
+      setErr(null);
+
+      const payload = {
+        name: name.trim(),
+        slug: slug.trim(),
+        basePrice: priceNum,
+        description: description.trim() || undefined,
+        imageUrl: imageUrl.trim() || undefined,
+        categoryName: categoryName.trim() || undefined,
+        variants: variants.length
+          ? variants
+          : [
+              {
+                sku: slug.toUpperCase() + "-M",
+                size: "M",
+                color: "black",
+                stock: 10,
+              },
+            ],
+      };
+
+      const created = await createProduct(payload);
+      setProducts((prev) => [...prev, created]);
+
+      // скидаємо форму
+      setName("");
+      setSlug("");
+      setBasePrice("");
+      setDescription("");
+      setCategoryName("");
+      setImageUrl("");
+      setImageFile(null);
+      setVariants([]);
+      alert("Товар створено в базі");
+    } catch (e: any) {
+      console.error(e);
+      setErr(e?.message ?? "Помилка створення товару");
+    } finally {
+      setLoading(false);
     }
-
-    // якщо немає жодного варіанту — зробимо дефолтний,
-    // щоб структура завжди була валідною
-    let variants: Variant[];
-    if (variantDrafts.length === 0) {
-      const autoSku = slug.toUpperCase() + "-M";
-      variants = [
-        {
-          colorId: "default",
-          colorHex: "#ffffff",
-          sizes: [{ size: "M", sku: autoSku, inStock: true }],
-        },
-      ];
-    } else {
-      variants = variantDrafts.map((v, idx) => {
-        if (v.sizes.length === 0) {
-          const autoSku = `${slug.toUpperCase()}-${v.colorId.toUpperCase()}-M`;
-          return {
-            ...v,
-            sizes: [{ size: "M", sku: autoSku, inStock: true }],
-          };
-        }
-        return v;
-      });
-    }
-
-    const tags = tagsInput
-      .split(",")
-      .map((t) => t.trim())
-      .filter(Boolean);
-
-    const images: string[] = imageUrl.trim()
-      ? [imageUrl.trim()]
-      : [];
-
-    const newProduct: Product = {
-      id: Date.now().toString(),
-      slug: slug.trim(),
-      title: title.trim(),
-      price: numPrice,
-      images,
-      tags: tags.length ? tags : undefined,
-      variants,
-    };
-
-    setProducts((prev) => [...prev, newProduct]);
-
-    // скидаємо форму
-    setTitle("");
-    setSlug("");
-    setPrice("");
-    setImageUrl("");
-    setTagsInput("");
-    setVariantDrafts([]);
-    setCurrentVariantIndex(null);
-    setSkuValue("");
-    setInStockValue(true);
   };
 
-  // ===== ВИДАЛЕННЯ ПРОДУКТУ =====
-  const deleteProduct = (slugToDelete: string) => {
-    if (!window.confirm(`Видалити товар ${slugToDelete}?`)) return;
-    setProducts((prev) => prev.filter((p) => p.slug !== slugToDelete));
+  // ====== ВИДАЛЕННЯ ТОВАРУ ======
+  const handleDeleteProduct = async (p: Product) => {
+    if (!window.confirm(`Видалити товар "${p.name}"?`)) return;
+    try {
+      setLoading(true);
+      setErr(null);
+      await deleteProductApi(p.id);
+      setProducts((prev) => prev.filter((x) => x.id !== p.id));
+    } catch (e: any) {
+      console.error(e);
+      setErr(e?.message ?? "Помилка видалення товару");
+    } finally {
+      setLoading(false);
+    }
   };
 
-  // ===== JSON ДЛЯ КОПІЮВАННЯ =====
-  const exportJson = useMemo(
+  // Для дебага — JSON
+  const debugJson = useMemo(
     () => JSON.stringify(products, null, 2),
     [products]
   );
 
-  const copyToClipboard = async () => {
-    try {
-      await navigator.clipboard.writeText(exportJson);
-      alert("Скопійовано! Встав у demoData.ts замість demoProducts.");
-    } catch (e) {
-      alert("Не вдалося скопіювати. Спробуй вручну виділити та скопіювати.");
-    }
-  };
-
-  // ===== UI =====
+  // ====== UI ======
   return (
     <>
       <Header />
@@ -211,17 +194,33 @@ function AdminPage() {
           maxWidth: "1200px",
           margin: "0 auto",
           padding: "32px 16px 48px",
-          fontFamily: "system-ui, -apple-system, BlinkMacSystemFont, sans-serif",
+          fontFamily:
+            "system-ui, -apple-system, BlinkMacSystemFont, sans-serif",
         }}
       >
-        <h1 style={{ fontSize: 26, marginBottom: 16 }}>Адмінка (локальний JSON)</h1>
-        <p style={{ marginBottom: 24, color: "#555" }}>
-          Тут ти додаєш товари. Внизу зʼявляється JSON. Просто копіюєш його в{" "}
-          <code>demoData.ts</code> замість старого <code>demoProducts</code>.
-          Ніяких серверів, все тільки локально.
-        </p>
+        <h1 style={{ fontSize: 26, marginBottom: 8 }}>
+          Адмінка
+        </h1>
+        {loading && (
+          <div style={{ marginBottom: 8, color: "#b86b31" }}>
+            Зачекай, йде запит до сервера...
+          </div>
+        )}
+        {err && (
+          <div
+            style={{
+              marginBottom: 8,
+              color: "#b2351e",
+              padding: "6px 10px",
+              background: "#ffecec",
+              borderRadius: 8,
+            }}
+          >
+            {err}
+          </div>
+        )}
 
-        {/* ФОРМА ПРОДУКТУ */}
+        {/* ФОРМА НОВОГО ТОВАРУ */}
         <section
           style={{
             padding: 16,
@@ -231,7 +230,8 @@ function AdminPage() {
             boxShadow: "0 2px 6px rgba(0,0,0,0.04)",
           }}
         >
-          <h2 style={{ fontSize: 18, marginBottom: 12 }}>Новий товар</h2>
+          <h2 style={{ fontSize: 20, marginBottom: 12 }}>Новий товар</h2>
+
           <div
             style={{
               display: "grid",
@@ -241,231 +241,203 @@ function AdminPage() {
             }}
           >
             <label>
-              <div>Title</div>
+              <div>Назва (name)</div>
               <input
-                value={title}
-                onChange={(e) => setTitle(e.target.value)}
-                placeholder="Спортивна худі"
-                style={inputStyle}
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                style={input}
+                placeholder="Black Hoodie"
               />
             </label>
-
             <label>
               <div>Slug</div>
               <input
                 value={slug}
                 onChange={(e) => setSlug(e.target.value)}
-                placeholder="hoodie"
-                style={inputStyle}
+                style={input}
+                placeholder="black-hoodie"
               />
             </label>
-
             <label>
-              <div>Price</div>
+              <div>Ціна (basePrice)</div>
               <input
-                value={price}
-                onChange={(e) => setPrice(e.target.value)}
-                placeholder="999"
-                style={inputStyle}
+                value={basePrice}
+                onChange={(e) => setBasePrice(e.target.value)}
+                style={input}
+                placeholder="1200"
               />
             </label>
-
             <label>
-              <div>Головне зображення (URL або імпортний шлях)</div>
+              <div>Категорія (тільки назва)</div>
+              <input
+                value={categoryName}
+                onChange={(e) => setCategoryName(e.target.value)}
+                style={input}
+                placeholder="Hoodies"
+              />
+            </label>
+          </div>
+
+          <label style={{ display: "block", marginBottom: 8 }}>
+            <div>Опис</div>
+            <textarea
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              style={{ ...input, minHeight: 60, resize: "vertical" }}
+              placeholder="Тепла худі, 80% cotton"
+            />
+          </label>
+
+          {/* ЗОБРАЖЕННЯ */}
+          <div
+            style={{
+              display: "flex",
+              gap: 12,
+              flexWrap: "wrap",
+              marginBottom: 12,
+              alignItems: "center",
+            }}
+          >
+            <div style={{ flex: 1, minWidth: 220 }}>
+              <div>URL зображення (можна вручну або після upload)</div>
               <input
                 value={imageUrl}
                 onChange={(e) => setImageUrl(e.target.value)}
-                placeholder="/clothPhoto/hoodie_red.png"
-                style={inputStyle}
+                style={input}
+                placeholder="https://...supabase.co/storage/v1/object/public/products/..."
               />
-            </label>
+            </div>
 
-            <label>
-              <div>Tags (через кому)</div>
+            <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
               <input
-                value={tagsInput}
-                onChange={(e) => setTagsInput(e.target.value)}
-                placeholder="New,-20%"
-                style={inputStyle}
+                type="file"
+                accept="image/*"
+                onChange={(e) =>
+                  setImageFile(e.target.files?.[0] ?? null)
+                }
               />
-            </label>
+              <button type="button" style={btnSoft} onClick={handleUploadImage}>
+                Завантажити на сервер (Supabase)
+              </button>
+            </div>
           </div>
 
           {/* ВАРІАНТИ */}
-          <div style={{ marginBottom: 8, display: "flex", gap: 8, flexWrap: "wrap" }}>
-            <button type="button" onClick={addVariant} style={btnSoft}>
-              + Додати варіант (колір)
+          <div
+            style={{
+              margin: "12px 0 8px",
+              fontWeight: 600,
+              fontSize: 14,
+            }}
+          >
+            Варіанти (size/color/sku)
+          </div>
+          <div
+            style={{
+              display: "flex",
+              gap: 8,
+              flexWrap: "wrap",
+              alignItems: "center",
+              marginBottom: 8,
+            }}
+          >
+            <select
+              value={variantSize}
+              onChange={(e) => setVariantSize(e.target.value)}
+              style={inputSmall}
+            >
+              {["XS", "S", "M", "L", "XL"].map((s) => (
+                <option key={s} value={s}>
+                  {s}
+                </option>
+              ))}
+            </select>
+            <input
+              value={variantColor}
+              onChange={(e) => setVariantColor(e.target.value)}
+              style={inputSmall}
+              placeholder="black"
+            />
+            <input
+              value={variantSku}
+              onChange={(e) => setVariantSku(e.target.value)}
+              style={inputSmall}
+              placeholder="BH-BLACK-M"
+            />
+            <input
+              value={variantPrice}
+              onChange={(e) => setVariantPrice(e.target.value)}
+              style={inputSmall}
+              placeholder="(ціна.) 1200"
+            />
+            <input
+              value={variantStock}
+              onChange={(e) => setVariantStock(e.target.value)}
+              style={inputSmall}
+              placeholder="(кільк.) 10"
+            />
+            <button type="button" style={btnSoft} onClick={addVariant}>
+              + Додати варіант
             </button>
           </div>
-
-          {variantDrafts.length > 0 && (
-            <div
-              style={{
-                display: "flex",
-                gap: 16,
-                alignItems: "flex-start",
-                flexWrap: "wrap",
-              }}
-            >
-              {/* Список варіантів */}
-              <div style={{ minWidth: 220 }}>
-                <div style={{ marginBottom: 4, fontWeight: 600 }}>Варіанти</div>
-                {variantDrafts.map((v, i) => (
-                  <div
-                    key={i}
-                    style={{
-                      padding: 8,
-                      marginBottom: 6,
-                      borderRadius: 8,
-                      border:
-                        i === currentVariantIndex
-                          ? "2px solid #b86b31"
-                          : "1px solid #ddd",
-                      display: "flex",
-                      justifyContent: "space-between",
-                      alignItems: "center",
-                      gap: 8,
-                      background: "#fff",
-                    }}
+          {variants.length > 0 && (
+            <div style={{ fontSize: 13, marginBottom: 12 }}>
+              {variants.map((v) => (
+                <span
+                  key={v.sku}
+                  style={{
+                    display: "inline-flex",
+                    gap: 6,
+                    alignItems: "center",
+                    padding: "4px 8px",
+                    borderRadius: 999,
+                    border: "1px solid #ddd",
+                    marginRight: 6,
+                    marginBottom: 6,
+                    background: "#fff",
+                  }}
+                >
+                  <span>
+                    {v.size}/{v.color}
+                  </span>
+                  <span style={{ color: "#888" }}>{v.sku}</span>
+                  {typeof v.stock === "number" && (
+                    <span style={{ color: "#666", fontSize: 11 }}>
+                      stock: {v.stock}
+                    </span>
+                  )}
+                  <button
+                    type="button"
+                    style={miniBtn}
+                    onClick={() => removeVariant(v.sku)}
                   >
-                    <div
-                      style={{
-                        width: 16,
-                        height: 16,
-                        borderRadius: 4,
-                        background: v.colorHex,
-                        border: "1px solid #ccc",
-                      }}
-                    />
-                    <div style={{ flex: 1 }}>
-                      <div>{v.colorId}</div>
-                      <div
-                        style={{ fontSize: 11, color: "#999" }}
-                      >{`${v.sizes.length} розмір(и)`}</div>
-                    </div>
-                    <button
-                      type="button"
-                      style={miniBtn}
-                      onClick={() => setCurrentVariantIndex(i)}
-                    >
-                      edit
-                    </button>
-                    <button
-                      type="button"
-                      style={miniBtnDanger}
-                      onClick={() => removeVariant(i)}
-                    >
-                      ×
-                    </button>
-                  </div>
-                ))}
-              </div>
-
-              {/* Додавання розміру до активного варіанту */}
-              {currentVariantIndex != null && (
-                <div style={{ flex: 1, minWidth: 260 }}>
-                  <div style={{ marginBottom: 4, fontWeight: 600 }}>
-                    Розміри для варіанту #{currentVariantIndex + 1}
-                  </div>
-                  <div
-                    style={{
-                      display: "flex",
-                      gap: 8,
-                      flexWrap: "wrap",
-                      alignItems: "center",
-                      marginBottom: 8,
-                    }}
-                  >
-                    <select
-                      value={sizeValue}
-                      onChange={(e) => setSizeValue(e.target.value as Size)}
-                      style={inputStyle}
-                    >
-                      {sizesList.map((s) => (
-                        <option key={s} value={s}>
-                          {s}
-                        </option>
-                      ))}
-                    </select>
-                    <input
-                      value={skuValue}
-                      onChange={(e) => setSkuValue(e.target.value)}
-                      placeholder="HD-R-S"
-                      style={inputStyle}
-                    />
-                    <label style={{ display: "flex", alignItems: "center", gap: 4 }}>
-                      <input
-                        type="checkbox"
-                        checked={inStockValue}
-                        onChange={(e) => setInStockValue(e.target.checked)}
-                      />
-                      В наявності
-                    </label>
-                    <button
-                      type="button"
-                      onClick={addSizeToCurrentVariant}
-                      style={btnSoft}
-                    >
-                      + Додати розмір
-                    </button>
-                  </div>
-
-                  {/* Показати розміри */}
-                  <div style={{ fontSize: 13 }}>
-                    {variantDrafts[currentVariantIndex].sizes.map((s) => (
-                      <div
-                        key={s.sku}
-                        style={{
-                          display: "inline-flex",
-                          gap: 6,
-                          alignItems: "center",
-                          padding: "4px 8px",
-                          borderRadius: 999,
-                          border: "1px solid #ddd",
-                          marginRight: 6,
-                          marginBottom: 6,
-                        }}
-                      >
-                        <span>{s.size}</span>
-                        <span style={{ color: "#888" }}>{s.sku}</span>
-                        {!s.inStock && (
-                          <span style={{ color: "#c00", fontSize: 10 }}>out</span>
-                        )}
-                        <button
-                          type="button"
-                          style={miniBtn}
-                          onClick={() =>
-                            removeSize(currentVariantIndex, s.sku)
-                          }
-                        >
-                          ×
-                        </button>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
+                    ×
+                  </button>
+                </span>
+              ))}
             </div>
           )}
 
-          <div style={{ marginTop: 12 }}>
-            <button type="button" onClick={addProduct} style={btnPrimary}>
-              Зберегти товар у локальний список
-            </button>
-          </div>
+          <button
+            type="button"
+            style={btnPrimary}
+            onClick={handleCreateProduct}
+          >
+            Створити товар в базі
+          </button>
         </section>
 
-        {/* СПИСОК ТОВАРІВ */}
+        {/* СПИСОК ТОВАРІВ З БАЗИ */}
         <section
           style={{
-            marginBottom: 24,
             padding: 16,
             borderRadius: 12,
             background: "#f5f5f5",
+            marginBottom: 24,
           }}
         >
-          <h2 style={{ fontSize: 18, marginBottom: 8 }}>Поточні товари</h2>
-          {products.length === 0 && <div>Ще немає товарів.</div>}
+          <h2 style={{ fontSize: 18, marginBottom: 8 }}>Товари в базі</h2>
+          {products.length === 0 && <div>Поки немає товарів.</div>}
           {products.map((p) => (
             <div
               key={p.id}
@@ -479,20 +451,22 @@ function AdminPage() {
               }}
             >
               <div>
-                <strong>{p.title}</strong>{" "}
+                <strong>{p.name}</strong>{" "}
                 <span style={{ color: "#999" }}>({p.slug})</span>
+                {p.basePrice != null && (
+                  <span style={{ marginLeft: 8, color: "#555" }}>
+                    {p.basePrice} грн
+                  </span>
+                )}
               </div>
               <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-                <span style={{ color: "#666" }}>
-                  {p.variants.length} вар. / {p.variants
-                    .map((v) => v.sizes.length)
-                    .reduce((a, b) => a + b, 0)}{" "}
-                  SKU
+                <span style={{ fontSize: 12, color: "#777" }}>
+                  {p.variants?.length ?? 0} варіантів
                 </span>
                 <button
                   type="button"
                   style={miniBtnDanger}
-                  onClick={() => deleteProduct(p.slug)}
+                  onClick={() => handleDeleteProduct(p)}
                 >
                   Видалити
                 </button>
@@ -501,33 +475,28 @@ function AdminPage() {
           ))}
         </section>
 
-        {/* ЕКСПОРТ JSON */}
+        {/* Опційно: дебаг JSON */}
         <section>
-          <h2 style={{ fontSize: 18, marginBottom: 8 }}>Export JSON</h2>
-          <p style={{ fontSize: 13, color: "#666", marginBottom: 8 }}>
-            Скопіюй це і встав у <code>demoData.ts</code> замість
-            <code>demoProducts</code>.
-          </p>
-          <div style={{ marginBottom: 8 }}>
-            <button type="button" onClick={copyToClipboard} style={btnSoft}>
-              Скопіювати в буфер
-            </button>
-          </div>
-          <textarea
-            value={exportJson}
-            readOnly
-            style={{
-              width: "100%",
-              minHeight: 260,
-              fontFamily: "monospace",
-              fontSize: 12,
-              padding: 10,
-              borderRadius: 8,
-              border: "1px solid #ddd",
-              background: "#fafafa",
-              whiteSpace: "pre",
-            }}
-          />
+          <details>
+            <summary style={{ cursor: "pointer" }}>
+              Показати сирий JSON (для дебага)
+            </summary>
+            <textarea
+              readOnly
+              value={debugJson}
+              style={{
+                width: "100%",
+                minHeight: 200,
+                fontFamily: "monospace",
+                fontSize: 12,
+                padding: 10,
+                borderRadius: 8,
+                border: "1px solid #ddd",
+                background: "#fafafa",
+                marginTop: 8,
+              }}
+            />
+          </details>
         </section>
       </main>
       <Footer />
@@ -535,15 +504,20 @@ function AdminPage() {
   );
 }
 
-/* ===== ТРОХИ СТИЛІВ ===== */
+/* трохи стилів inline */
 
-const inputStyle: React.CSSProperties = {
+const input: React.CSSProperties = {
   width: "100%",
   padding: "6px 8px",
   borderRadius: 6,
   border: "1px solid #d0c6b8",
   fontSize: 13,
   boxSizing: "border-box",
+};
+
+const inputSmall: React.CSSProperties = {
+  ...input,
+  maxWidth: 130,
 };
 
 const btnSoft: React.CSSProperties = {
@@ -581,4 +555,4 @@ const miniBtnDanger: React.CSSProperties = {
   color: "#b2351e",
 };
 
-export default AdminPage;
+export default AdminDbPage;
