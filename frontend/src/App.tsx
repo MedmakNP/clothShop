@@ -1,3 +1,5 @@
+// src/App.tsx (або де в тебе роутер)
+
 import React from "react";
 import HomePage from "./Pages/homePage";
 import ShopPage from "./Pages/shopPage";
@@ -6,41 +8,45 @@ import BlogPage from "./Pages/blogPage";
 import ContactsPage from "./Pages/contactsPage";
 import AdminDbPage from "./Pages/adminPage";
 import "./i18n";
-import { createBrowserRouter } from "react-router-dom";
+import { createHashRouter } from "react-router-dom";
 import ProductPage from "./Pages/product";
 
 interface RouteConfig {
-  path: string,
-  element: React.ReactNode
-  }
+  path: string;
+  element: React.ReactNode;
+}
+
 const routerConfig: RouteConfig[] = [
   {
-    path: "/*",
+    path: "/",
     element: <HomePage />,
   },
   {
-    path: "/TechWorld-TypeScript/shopPage",
+    path: "/shopPage",
     element: <ShopPage />,
   },
-  { path: "/product/:slug", element: <ProductPage /> },
   {
-    path: "/TechWorld-TypeScript/buyersPage",
+    path: "/buyersPage",
     element: <BuyersPage />,
   },
   {
-    path: "/TechWorld-TypeScript/blogPage",
+    path: "/blogPage",
     element: <BlogPage />,
   },
   {
-    path: "/TechWorld-TypeScript/contactsPage",
+    path: "/contactsPage",
     element: <ContactsPage />,
   },
-   {
-    path: "/TechWorld-TypeScript/admin",
+  {
+    path: "/product/:slug",
+    element: <ProductPage />,
+  },
+  {
+    path: "/admin",
     element: <AdminDbPage />,
   },
 ];
-const router = createBrowserRouter(routerConfig)
 
+const router = createHashRouter(routerConfig);
 
 export default router;
