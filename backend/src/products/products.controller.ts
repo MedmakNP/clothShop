@@ -4,7 +4,6 @@ import {
   Param,
   Post,
   Body,
-  Put,
   Delete,
   ParseIntPipe,
 } from '@nestjs/common';
@@ -33,10 +32,16 @@ export class ProductsController {
     return this.productsService.create(dto);
   }
 
-  // PUT /products/:id
-  @Put(':id')
+  // (update можна зробити потім, можна навіть тимчасово прибрати)
+  // @Put(':id')
+  // update(
+  //   @Param('id', ParseIntPipe) id: number,
+  //   @Body() dto: CreateProductDto,
+  // ) {
+  //   return this.productsService.update(id, dto);
+  // }
 
-  // DELETE /products/:id
+  // 🔥 DELETE /products/:id
   @Delete(':id')
   remove(@Param('id', ParseIntPipe) id: number) {
     return this.productsService.remove(id);
