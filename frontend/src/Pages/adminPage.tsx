@@ -4,7 +4,7 @@ import Header from "../Components/Header/header";
 import HotBar from "../Components/HotBar/hotBar";
 import Footer from "../Components/Footer/footer";
 
-import type { Product } from "../Storage/demoData";
+import type { ApiProduct } from "../api/products";
 import {
   getProducts,
   createProduct,
@@ -21,7 +21,7 @@ type NewVariant = {
 };
 
 function AdminDbPage() {
-  const [products, setProducts] = useState<Product[]>([]);
+  const [products, setProducts] = useState<ApiProduct[]>([]);
   const [loading, setLoading] = useState(false);
   const [err, setErr] = useState<string | null>(null);
 
@@ -37,7 +37,7 @@ function AdminDbPage() {
   // простий список варіантів
   const [variants, setVariants] = useState<NewVariant[]>([]);
   const [variantSize, setVariantSize] = useState("M");
-  const [variantColor, setVariantColor] = useState("black");
+  const [variantColor, setVariantColor] = useState("#000000");
   const [variantSku, setVariantSku] = useState("");
   const [variantPrice, setVariantPrice] = useState<string>("");
   const [variantStock, setVariantStock] = useState<string>("10");
@@ -163,7 +163,7 @@ function AdminDbPage() {
   };
 
   // ====== ВИДАЛЕННЯ ТОВАРУ ======
-  const handleDeleteProduct = async (p: Product) => {
+  const handleDeleteProduct = async (p: ApiProduct) => {
     if (!window.confirm(`Видалити товар "${p.name}"?`)) return;
     try {
       setLoading(true);
@@ -341,23 +341,33 @@ function AdminDbPage() {
               marginBottom: 8,
             }}
           >
-            <select
+            <input
               value={variantSize}
               onChange={(e) => setVariantSize(e.target.value)}
               style={inputSmall}
-            >
-              {["XS", "S", "M", "L", "XL"].map((s) => (
-                <option key={s} value={s}>
-                  {s}
-                </option>
-              ))}
-            </select>
-            <input
-              value={variantColor}
-              onChange={(e) => setVariantColor(e.target.value)}
-              style={inputSmall}
-              placeholder="black"
+              placeholder="Розмір (M, S, 108, 120...)"
             />
+            <div style={{ display: "flex", gap: 4, alignItems: "center" }}>
+              <input
+                type="color"
+                value={variantColor}
+                onChange={(e) => setVariantColor(e.target.value)}
+                style={{
+                  width: 36,
+                  height: 32,
+                  padding: 0,
+                  border: "none",
+                  background: "none",
+                  cursor: "pointer",
+                }}
+              />
+              <input
+                value={variantColor}
+                onChange={(e) => setVariantColor(e.target.value)}
+                style={inputSmall}
+                placeholder="#000000"
+              />
+            </div>
             <input
               value={variantSku}
               onChange={(e) => setVariantSku(e.target.value)}

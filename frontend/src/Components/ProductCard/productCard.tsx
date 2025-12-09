@@ -1,29 +1,28 @@
 import React, { useMemo, useState } from "react";
 import s from "./slide.module.css";
 
-/* === ТИПИ ПІД ТВОЮ БД === */
-type Size = "XS" | "S" | "M" | "L" | "XL";
-type VariantSize = { size: Size; sku: string; inStock: boolean; price?: number };
-type Variant = { colorId: string; colorHex: string; sizes: VariantSize[] };
+/* === ТИП ПІД ТВОЄ API === */
+
+export type ProductVariant = {
+  id: number;
+  sku: string;
+  size: string;
+  color: string;
+  price?: number;
+  stock?: number;
+};
+
 export type Product = {
-  id: string;
+  id: number;
   slug: string;
-  title: string;
-  price: number;
-  images: string[];       // product-level галерея
-  tags?: string[];
-  variants: Variant[];    // варіант = колір, усередині розміри
+  name: string;
+  basePrice: number;
   description?: string;
+  images: string[];
+  variants: ProductVariant[];
 };
 
 /* === ДОПОМОЖНІ === */
-function useSelectedMedia(product: Product, colorIndex: number, mainIndex: number) {
-  // Проста логіка: якщо масив images відповідає порядку кольорів,
-  // показуємо зображення за індексом кольору; інакше—вибране з галереї.
-  const colorImage = product.images[colorIndex] ?? product.images[0];
-  const main = product.images[mainIndex] ?? colorImage ?? product.images[0];
-  return { main, colorImage };
-}
 
 function formatPrice(n: number) {
   return new Intl.NumberFormat("uk-UA").format(n) + " грн";
@@ -34,44 +33,73 @@ export function ProductCard({
   onAddToCart,
 }: {
   product: Product;
-  onAddToCart?: (payload: { sku: string; qty: number }) => void;
+  onAddToCart?: (payload: { variantId: number; qty: number }) => void;
 }) {
-  const [colorIndex, setColorIndex] = useState(0);
-  const [mainIndex, setMainIndex] = useState(0);
-  const [size, setSize] = useState<Size | null>(null);
-  const selectedVariant = product.variants[colorIndex];
+  const variants = product.variants ?? [];
 
-  const { main } = useSelectedMedia(product, colorIndex, mainIndex);
+  // Унікальні кольори з варіантів
+  const colors = useMemo(
+    () => Array.from(new Set(variants.map((v) => v.color))),
+    [variants]
+  );
 
-  // Ціна до показу (можеш розширити логіку, якщо є оверрайди в size/variant)
-  const displayPrice = useMemo(() => {
-    const v = selectedVariant;
-    const s = v?.sizes.find((x) => x.size === size || size === null);
-    return s?.price ?? product.price;
-  }, [product.price, selectedVariant, size]);
+  // обраний колір
+  const [selectedColor, setSelectedColor] = useState<string>(
+    colors[0] ?? ""
+  );
 
-  // SKU для додавання в кошик — беремо з вибраного розміру
-  const currentSku = useMemo(() => {
-    const s = selectedVariant?.sizes.find(x => x.size === size);
-    return s?.sku ?? null;
-  }, [selectedVariant, size]);
+  // усі розміри для обраного кольору
+  const sizesForColor = useMemo(
+    () =>
+      variants
+        .filter((v) => v.color === selectedColor)
+        .map((v) => v.size),
+    [variants, selectedColor]
+  );
+
+  // обраний розмір
+  const [selectedSize, setSelectedSize] = useState<string>(
+    sizesForColor[0] ?? ""
+  );
+
+  // обраний варіант color+size
+  const selectedVariant = useMemo(
+    () =>
+      variants.find(
+        (v) => v.color === selectedColor && v.size === selectedSize
+      ),
+    [variants, selectedColor, selectedSize]
+  );
+
+  const isOutOfStock =
+    selectedVariant && typeof selectedVariant.stock === "number"
+      ? selectedVariant.stock <= 0
+      : false;
+
+  // Ціна до показу
+  const displayPrice =
+    selectedVariant?.price ?? product.basePrice;
+
+  // основне зображення (просто перше, або колись прив’яжеш по кольору)
+  const mainImage = product.images[0];
 
   return (
     <section className={s.wrap}>
       <div className={s.grid}>
-        {/* ГАЛЕРЕЯ */}
+        {/* ГАЛЕРЕЯ (спрощено: одна головна + всі превʼю) */}
         <div className={s.gallery}>
           <div className={s.main}>
-            {main && <img src={main} alt={product.title} />}
+            {mainImage && (
+              <img src={mainImage} alt={product.name} />
+            )}
           </div>
 
           <div className={s.thumbs}>
             {product.images.map((src, i) => (
               <button
                 key={i}
-                className={`${s.th} ${i === mainIndex ? s.active : ""}`}
+                className={s.th}
                 aria-label={`Фото ${i + 1}`}
-                onClick={() => setMainIndex(i)}
               >
                 <img src={src} alt="" aria-hidden />
               </button>
@@ -82,85 +110,109 @@ export function ProductCard({
         {/* ІНФО */}
         <div className={s.info}>
           <div className={s.breadcrumbs}>
-            <a href="/shop">Каталог</a> <span>•</span> <span>{product.title}</span>
+            <a href="/shop">Каталог</a> <span>•</span>{" "}
+            <span>{product.name}</span>
           </div>
 
-          <h1 className={s.title}>{product.title}</h1>
+          <h1 className={s.title}>{product.name}</h1>
 
           <div className={s.priceRow}>
-            <div className={s.price}>{formatPrice(displayPrice)}</div>
-            {/* за потреби: <div className={s.old}>2199 грн</div> */}
+            <div className={s.price}>
+              {formatPrice(displayPrice)}
+            </div>
           </div>
 
           {/* КОЛІР */}
-          <div className={s.block}>
-            <div className={s.label}>Колір</div>
-            <div className={s.swatches}>
-              {product.variants.map((v, i) => (
-                <button
-                  key={v.colorId}
-                  className={`${s.sw} ${i === colorIndex ? s.swActive : ""}`}
-                  style={{ background: v.colorHex }}
-                  aria-label={v.colorId}
-                  onClick={() => {
-                    setColorIndex(i);
-                    setMainIndex(i < product.images.length ? i : 0); // підміняємо фото під колір
-                    setSize(null);
-                  }}
-                />
-              ))}
+          {colors.length > 0 && (
+            <div className={s.block}>
+              <div className={s.label}>Колір</div>
+              <div className={s.swatches}>
+                {colors.map((color) => (
+                  <button
+                    key={color}
+                    className={`${s.sw} ${
+                      selectedColor === color ? s.swActive : ""
+                    }`}
+                    style={{ background: color }}
+                    aria-label={color}
+                    onClick={() => {
+                      setSelectedColor(color);
+                      const sizes = variants
+                        .filter((v) => v.color === color)
+                        .map((v) => v.size);
+                      setSelectedSize(sizes[0] ?? "");
+                    }}
+                  />
+                ))}
+              </div>
             </div>
-          </div>
+          )}
 
-          {/* РОЗМІРИ */}
-          <div className={s.block}>
-            <div className={s.label}>Розмір</div>
-            <div className={s.sizes}>
-              {selectedVariant?.sizes.map((x) => (
-                <button
-                  key={x.sku}
-                  className={`${s.size} ${size === x.size ? s.sizeActive : ""}`}
-                  onClick={() => setSize(x.size)}
-                  disabled={!x.inStock}
-                  aria-disabled={!x.inStock}
-                  title={!x.inStock ? "Немає в наявності" : ""}
-                >
-                  {x.size}
-                </button>
-              ))}
+          {/* РОЗМІР */}
+          {sizesForColor.length > 0 && (
+            <div className={s.block}>
+              <div className={s.label}>Розмір</div>
+              <div className={s.sizes}>
+                {sizesForColor.map((sz) => {
+                  const v = variants.find(
+                    (x) =>
+                      x.color === selectedColor &&
+                      x.size === sz
+                  );
+                  const disabled = !v || (v.stock ?? 0) <= 0;
+
+                  return (
+                    <button
+                      key={`${selectedColor}-${sz}`}
+                      className={`${s.size} ${
+                        selectedSize === sz ? s.sizeActive : ""
+                      }`}
+                      onClick={() => setSelectedSize(sz)}
+                      disabled={disabled}
+                      aria-disabled={disabled}
+                      title={
+                        disabled ? "Немає в наявності" : ""
+                      }
+                    >
+                      {sz}
+                    </button>
+                  );
+                })}
+              </div>
             </div>
-          </div>
+          )}
 
           {/* CTA */}
           <div className={s.ctaRow}>
             <button
               className={s.cta}
-              disabled={!currentSku}
-              onClick={() => currentSku && onAddToCart?.({ sku: currentSku, qty: 1 })}
+              disabled={!selectedVariant || isOutOfStock}
+              onClick={() =>
+                selectedVariant &&
+                onAddToCart?.({
+                  variantId: selectedVariant.id,
+                  qty: 1,
+                })
+              }
             >
-              Додати в кошик
+              {isOutOfStock
+                ? "Немає в наявності"
+                : "Додати в кошик"}
             </button>
             <div className={s.notes}>
-              Безкоштовна доставка від 1500 грн · Повернення 30 днів
+              Безкоштовна доставка від 1500 грн · Повернення
+              30 днів
             </div>
           </div>
 
-          {/* ВКЛАДКИ/ОПИС */}
+          {/* ОПИС */}
           <div className={s.tabs}>
             <details open>
               <summary>Опис</summary>
               <p>
                 {product.description ??
-                  "М’яка бавовна з флісом, комфортна посадка, базові кольори. Підійде для тренувань і на кожен день."}
+                  "Опис товару скоро зʼявиться."}
               </p>
-            </details>
-            <details>
-              <summary>Склад і догляд</summary>
-              <p>80% бавовна, 20% поліестер. Машинне прання при 30°C, делікатний режим.</p>
-            </details>
-            <details>
-              <summary>Доставка та оплата</summary>
-              <p>Нова Пошта по Україні. Оплата карткою (LiqPay/WayForPay) або накладений платіж.</p>
             </details>
           </div>
         </div>

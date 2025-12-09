@@ -1,19 +1,47 @@
 // src/api/products.ts
 
-
 import { apiGet, apiPost, apiPut, apiDelete } from "./client";
-import type { Product as ApiProduct } from "../Storage/demoData";
-import type { Product } from "../Storage/demoData"; // твій тип із Storage
 
-export type { ApiProduct }; // щоб зручно було далі імпортувати
+/**
+ * Точний (або майже точний) тип того, що повертає бекенд /products і /products/:slug
+ * Підлаштовано під Prisma include: { images: true, variants: true, category: true }
+ */
+export type ApiProductImage = {
+  id: number;
+  url: string;
+  sortOrder: number;
+  productId: number;
+};
 
+export type ApiProductVariant = {
+  id: number;
+  productId: number;
+  sku: string;
+  size: string;   // будь-який текст: "M", "108", "42-44"
+  color: string;  // "#000000" або "black"
+  price: number | null;
+  stock: number;
+  isActive: boolean;
+};
 
+export type ApiProduct = {
+  id: number;
+  slug: string;
+  name: string;
+  basePrice: number;
+  description: string | null;
+  isActive: boolean;
+  createdAt: string;
+  categoryId: number | null;
+  images: ApiProductImage[];
+  variants: ApiProductVariant[];
+  // category теж є, але нам поки не обовʼязково його типізувати
+};
 
-export const getProducts = () => apiGet<Product[]>("/products");
+export const getProducts = () => apiGet<ApiProduct[]>("/products");
+
 export const getProduct = (slug: string) =>
-  apiGet<Product>(`/products/${slug}`);
-
-// ↓↓↓ нові методи для адмінки ↓↓↓
+  apiGet<ApiProduct>(`/products/${slug}`);
 
 /** Створити новий товар */
 export const createProduct = (payload: {
@@ -30,11 +58,11 @@ export const createProduct = (payload: {
     price?: number;
     stock?: number;
   }[];
-}) => apiPost<Product>("/products", payload);
+}) => apiPost<ApiProduct>("/products", payload);
 
 /** Оновити товар */
-export const updateProduct = (id: number, payload: Partial<Product>) =>
-  apiPut<Product>(`/products/${id}`, payload);
+export const updateProduct = (id: number, payload: Partial<ApiProduct>) =>
+  apiPut<ApiProduct>(`/products/${id}`, payload);
 
 /** Видалити товар */
 export const deleteProductApi = (id: number) =>

@@ -11,69 +11,27 @@ import ProductCard, {
   type Product as CardProduct,
 } from "../Components/ProductCard/productCard";
 
-// допоміжний тип — як у тебе в Storage/demoData
-import type { ProductVariant } from "../Storage/demoData";
-
-// Мапимо колір у HEX (поки що груба логіка, можна потім винести в конфіг)
-function colorToHex(color: string | null | undefined): string {
-  if (!color) return "#cccccc";
-  switch (color.toLowerCase()) {
-    case "black":
-      return "#000000";
-    case "white":
-      return "#ffffff";
-    case "red":
-      return "#ff0000";
-    case "blue":
-      return "#0066ff";
-    case "green":
-      return "#2ecc71";
-    default:
-      return "#cccccc";
-  }
-}
-
 // Маппер: ApiProduct -> CardProduct
 function mapApiProductToCardProduct(p: ApiProduct): CardProduct {
   // зображення з бекенду
   const images = (p.images ?? []).map((img) => img.url);
 
-  // групуємо варіанти по кольору
-  const byColor = new Map<
-    string,
-    {
-      colorId: string;
-      colorHex: string;
-      sizes: { size: any; sku: string; inStock: boolean; price?: number }[];
-    }
-  >();
-
-  for (const v of p.variants ?? []) {
-    const colorId = (v.color || "default").toLowerCase();
-    if (!byColor.has(colorId)) {
-      byColor.set(colorId, {
-        colorId,
-        colorHex: colorToHex(colorId),
-        sizes: [],
-      });
-    }
-    const bucket = byColor.get(colorId)!;
-    bucket.sizes.push({
-      size: v.size as any, // "S" | "M" | "L" ...
-      sku: v.sku,
-      inStock: true, // можна буде повʼязати зі stock, якщо додаси в тип
-    });
-  }
-
   return {
-    id: String(p.id),
+    id: p.id,                       // ✅ число
     slug: p.slug,
-    title: p.name,
-    price: p.basePrice,
+    name: p.name,                   // ✅ дивись, не title
+    basePrice: p.basePrice,
+    description: p.description ?? undefined,
     images,
-    tags: undefined, // можна підтягнути з БД, якщо додаси
-    variants: Array.from(byColor.values()),
-    description: p.description,
+    variants:
+      p.variants?.map((v) => ({
+        id: v.id,
+        sku: v.sku,
+        size: v.size,
+        color: v.color,
+        price: v.price ?? undefined,
+        stock: v.stock ?? undefined,
+      })) ?? [],
   };
 }
 
