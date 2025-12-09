@@ -42,7 +42,10 @@ export class SupabaseService {
         upsert: !!opts.upsert,
       });
 
-    if (error) throw error;
+    if (error) {
+      console.error('🔥 SUPABASE STORAGE UPLOAD ERROR:', error);
+      throw error;
+    }
 
     const { data } = this.client.storage.from(this.bucket).getPublicUrl(path);
     return { url: data.publicUrl, path };
