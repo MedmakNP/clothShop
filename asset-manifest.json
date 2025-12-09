@@ -1,18 +1,18 @@
 {
   "files": {
     "main.css": "/clothShop/static/css/main.6b8143a6.css",
-    "main.js": "/clothShop/static/js/main.13c72067.js",
+    "main.js": "/clothShop/static/js/main.b2fcf188.js",
     "static/js/453.c42fa545.chunk.js": "/clothShop/static/js/453.c42fa545.chunk.js",
     "static/media/test.png": "/clothShop/static/media/test.26230d16a61849da8203.png",
     "static/media/modern-camera.jpg": "/clothShop/static/media/modern-camera.1ad9c96e6acc0319cc84.jpg",
     "static/media/monitor-your-health.jpg": "/clothShop/static/media/monitor-your-health.4b6c4543a445064cd5e7.jpg",
     "index.html": "/clothShop/index.html",
     "main.6b8143a6.css.map": "/clothShop/static/css/main.6b8143a6.css.map",
-    "main.13c72067.js.map": "/clothShop/static/js/main.13c72067.js.map",
+    "main.b2fcf188.js.map": "/clothShop/static/js/main.b2fcf188.js.map",
     "453.c42fa545.chunk.js.map": "/clothShop/static/js/453.c42fa545.chunk.js.map"
   },
   "entrypoints": [
     "static/css/main.6b8143a6.css",
-    "static/js/main.13c72067.js"
+    "static/js/main.b2fcf188.js"
   ]
 }
