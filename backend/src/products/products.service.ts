@@ -3,6 +3,7 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 import { CreateProductDto } from './dto/create-product.dto';
+import { AddProductImageDto } from './dto/add-product-image.dto';
 
 @Injectable()
 export class ProductsService {
@@ -29,6 +30,16 @@ export class ProductsService {
         images: true,
         variants: true,
         category: true,
+      },
+    });
+  }
+  async addImage(productId: number, dto: AddProductImageDto) {
+    return this.prisma.productImage.create({
+      data: {
+        productId,
+        url: dto.url,
+        sortOrder: dto.sortOrder ?? 0,
+        variantId: dto.variantId ?? null,
       },
     });
   }

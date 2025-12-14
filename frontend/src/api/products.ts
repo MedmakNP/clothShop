@@ -11,6 +11,7 @@ export type ApiProductImage = {
   url: string;
   sortOrder: number;
   productId: number;
+  variantId: number | null; // 👈 додай
 };
 
 export type ApiProductVariant = {
@@ -63,6 +64,11 @@ export const createProduct = (payload: {
 /** Оновити товар */
 export const updateProduct = (id: number, payload: Partial<ApiProduct>) =>
   apiPut<ApiProduct>(`/products/${id}`, payload);
+
+export const addProductImage = (
+  productId: number,
+  payload: { url: string; sortOrder?: number; variantId?: number | null }
+) => apiPost(`/products/${productId}/images`, payload);
 
 /** Видалити товар */
 export const deleteProductApi = (id: number) =>

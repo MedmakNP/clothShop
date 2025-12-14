@@ -1,14 +1,14 @@
-// src/Pages/adminDbPage.tsx
 import React, { useEffect, useMemo, useState } from "react";
 import Header from "../Components/Header/header";
 import HotBar from "../Components/HotBar/hotBar";
 import Footer from "../Components/Footer/footer";
 
-import type { ApiProduct } from "../api/products";
 import {
   getProducts,
   createProduct,
   deleteProductApi,
+  addProductImage,
+  type ApiProduct,
 } from "../api/products";
 import { apiUploadImage } from "../api/client";
 
@@ -42,6 +42,13 @@ function AdminDbPage() {
   const [variantPrice, setVariantPrice] = useState<string>("");
   const [variantStock, setVariantStock] = useState<string>("10");
 
+  // ====== ДОДАВАННЯ БАГАТЬОХ ФОТО ДО ВЖЕ СТВОРЕНОГО ТОВАРУ ======
+  const [selectedProductId, setSelectedProductId] = useState<number | null>(
+    null
+  );
+  const [imgVariantId, setImgVariantId] = useState<number | null>(null); // null = загальні фото
+  const [imgSort, setImgSort] = useState<string>("0");
+
   // ====== ЗАВАНТАЖЕННЯ СПИСКУ ТОВАРІВ З БЕКЕНДУ ======
   const reloadProducts = async () => {
     try {
@@ -71,8 +78,8 @@ function AdminDbPage() {
       ...prev,
       {
         sku: variantSku.trim(),
-        size: variantSize,
-        color: variantColor,
+        size: variantSize.trim(),
+        color: variantColor.trim(),
         price: variantPrice ? Number(variantPrice) : undefined,
         stock: variantStock ? Number(variantStock) : undefined,
       },
@@ -86,7 +93,7 @@ function AdminDbPage() {
     setVariants((prev) => prev.filter((v) => v.sku !== sku));
   };
 
-  // ====== ЗАВАНТАЖЕННЯ КАРТИНКИ НА СЕРВЕР ======
+  // ====== ЗАВАНТАЖЕННЯ КАРТИНКИ НА СЕРВЕР (тільки upload, без прикріплення) ======
   const handleUploadImage = async () => {
     if (!imageFile) {
       alert("Обери файл зображення");
@@ -101,6 +108,42 @@ function AdminDbPage() {
     } catch (e: any) {
       console.error(e);
       setErr(e?.message ?? "Помилка завантаження зображення");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // ====== UPLOAD + ПРИКРІПИТИ ФОТО ДО ВЖЕ СТВОРЕНОГО ТОВАРУ ======
+  const handleUploadAndAttach = async () => {
+    if (!selectedProductId) {
+      alert("Спочатку вибери товар (кнопка 'Додати фото' біля товару)");
+      return;
+    }
+    if (!imageFile) {
+      alert("Обери файл зображення");
+      return;
+    }
+
+    try {
+      setLoading(true);
+      setErr(null);
+
+      // 1) upload -> supabase через бек
+      const { url } = await apiUploadImage(imageFile, "products");
+
+      // 2) записати url у БД як ProductImage (можна з variantId)
+      await addProductImage(selectedProductId, {
+        url,
+        sortOrder: Number(imgSort) || 0,
+        variantId: imgVariantId, // null = загальні фото
+      });
+
+      setImageFile(null);
+      alert("Фото додано ✅");
+      await reloadProducts();
+    } catch (e: any) {
+      console.error(e);
+      setErr(e?.message ?? "Помилка додавання фото");
     } finally {
       setLoading(false);
     }
@@ -127,7 +170,7 @@ function AdminDbPage() {
         slug: slug.trim(),
         basePrice: priceNum,
         description: description.trim() || undefined,
-        imageUrl: imageUrl.trim() || undefined,
+        imageUrl: imageUrl.trim() || undefined, // 1 фото при створенні (можна і порожнє)
         categoryName: categoryName.trim() || undefined,
         variants: variants.length
           ? variants
@@ -135,7 +178,7 @@ function AdminDbPage() {
               {
                 sku: slug.toUpperCase() + "-M",
                 size: "M",
-                color: "black",
+                color: "#000000",
                 stock: 10,
               },
             ],
@@ -170,6 +213,7 @@ function AdminDbPage() {
       setErr(null);
       await deleteProductApi(p.id);
       setProducts((prev) => prev.filter((x) => x.id !== p.id));
+      if (selectedProductId === p.id) setSelectedProductId(null);
     } catch (e: any) {
       console.error(e);
       setErr(e?.message ?? "Помилка видалення товару");
@@ -179,10 +223,7 @@ function AdminDbPage() {
   };
 
   // Для дебага — JSON
-  const debugJson = useMemo(
-    () => JSON.stringify(products, null, 2),
-    [products]
-  );
+  const debugJson = useMemo(() => JSON.stringify(products, null, 2), [products]);
 
   // ====== UI ======
   return (
@@ -194,13 +235,11 @@ function AdminDbPage() {
           maxWidth: "1200px",
           margin: "0 auto",
           padding: "32px 16px 48px",
-          fontFamily:
-            "system-ui, -apple-system, BlinkMacSystemFont, sans-serif",
+          fontFamily: "system-ui, -apple-system, BlinkMacSystemFont, sans-serif",
         }}
       >
-        <h1 style={{ fontSize: 26, marginBottom: 8 }}>
-          Адмінка
-        </h1>
+        <h1 style={{ fontSize: 26, marginBottom: 8 }}>Адмінка</h1>
+
         {loading && (
           <div style={{ marginBottom: 8, color: "#b86b31" }}>
             Зачекай, йде запит до сервера...
@@ -249,6 +288,7 @@ function AdminDbPage() {
                 placeholder="Black Hoodie"
               />
             </label>
+
             <label>
               <div>Slug</div>
               <input
@@ -258,6 +298,7 @@ function AdminDbPage() {
                 placeholder="black-hoodie"
               />
             </label>
+
             <label>
               <div>Ціна (basePrice)</div>
               <input
@@ -267,6 +308,7 @@ function AdminDbPage() {
                 placeholder="1200"
               />
             </label>
+
             <label>
               <div>Категорія (тільки назва)</div>
               <input
@@ -288,7 +330,7 @@ function AdminDbPage() {
             />
           </label>
 
-          {/* ЗОБРАЖЕННЯ */}
+          {/* ЗОБРАЖЕННЯ (1 фото при створенні) */}
           <div
             style={{
               display: "flex",
@@ -312,26 +354,19 @@ function AdminDbPage() {
               <input
                 type="file"
                 accept="image/*"
-                onChange={(e) =>
-                  setImageFile(e.target.files?.[0] ?? null)
-                }
+                onChange={(e) => setImageFile(e.target.files?.[0] ?? null)}
               />
               <button type="button" style={btnSoft} onClick={handleUploadImage}>
-                Завантажити на сервер (Supabase)
+                Завантажити (тільки upload)
               </button>
             </div>
           </div>
 
           {/* ВАРІАНТИ */}
-          <div
-            style={{
-              margin: "12px 0 8px",
-              fontWeight: 600,
-              fontSize: 14,
-            }}
-          >
+          <div style={{ margin: "12px 0 8px", fontWeight: 600, fontSize: 14 }}>
             Варіанти (size/color/sku)
           </div>
+
           <div
             style={{
               display: "flex",
@@ -347,6 +382,7 @@ function AdminDbPage() {
               style={inputSmall}
               placeholder="Розмір (M, S, 108, 120...)"
             />
+
             <div style={{ display: "flex", gap: 4, alignItems: "center" }}>
               <input
                 type="color"
@@ -368,28 +404,33 @@ function AdminDbPage() {
                 placeholder="#000000"
               />
             </div>
+
             <input
               value={variantSku}
               onChange={(e) => setVariantSku(e.target.value)}
               style={inputSmall}
               placeholder="BH-BLACK-M"
             />
+
             <input
               value={variantPrice}
               onChange={(e) => setVariantPrice(e.target.value)}
               style={inputSmall}
               placeholder="(ціна.) 1200"
             />
+
             <input
               value={variantStock}
               onChange={(e) => setVariantStock(e.target.value)}
               style={inputSmall}
               placeholder="(кільк.) 10"
             />
+
             <button type="button" style={btnSoft} onClick={addVariant}>
               + Додати варіант
             </button>
           </div>
+
           {variants.length > 0 && (
             <div style={{ fontSize: 13, marginBottom: 12 }}>
               {variants.map((v) => (
@@ -428,11 +469,7 @@ function AdminDbPage() {
             </div>
           )}
 
-          <button
-            type="button"
-            style={btnPrimary}
-            onClick={handleCreateProduct}
-          >
+          <button type="button" style={btnPrimary} onClick={handleCreateProduct}>
             Створити товар в базі
           </button>
         </section>
@@ -448,6 +485,7 @@ function AdminDbPage() {
         >
           <h2 style={{ fontSize: 18, marginBottom: 8 }}>Товари в базі</h2>
           {products.length === 0 && <div>Поки немає товарів.</div>}
+
           {products.map((p) => (
             <div
               key={p.id}
@@ -469,10 +507,29 @@ function AdminDbPage() {
                   </span>
                 )}
               </div>
+
               <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
                 <span style={{ fontSize: 12, color: "#777" }}>
                   {p.variants?.length ?? 0} варіантів
                 </span>
+
+                <button
+                  type="button"
+                  style={{
+                    ...miniBtn,
+                    borderColor:
+                      selectedProductId === p.id ? "#b86b31" : "#ccc",
+                    color: selectedProductId === p.id ? "#b86b31" : "#333",
+                  }}
+                  onClick={() => {
+                    setSelectedProductId(p.id);
+                    setImgVariantId(null);
+                    setImgSort("0");
+                  }}
+                >
+                  Додати фото
+                </button>
+
                 <button
                   type="button"
                   style={miniBtnDanger}
@@ -484,6 +541,128 @@ function AdminDbPage() {
             </div>
           ))}
         </section>
+
+        {/* ПАНЕЛЬ ДОДАВАННЯ ФОТО ДО ІСНУЮЧОГО ТОВАРУ */}
+        {selectedProductId && (
+          <section
+            style={{
+              padding: 16,
+              borderRadius: 12,
+              background: "#fff",
+              border: "1px solid #eee",
+              marginBottom: 24,
+            }}
+          >
+            <h3 style={{ marginTop: 0, marginBottom: 10 }}>
+              Додати фото до товару ID: {selectedProductId}
+            </h3>
+
+            {(() => {
+              const p = products.find((x) => x.id === selectedProductId);
+              if (!p?.variants?.length) return null;
+
+              // беремо унікальні кольори -> variantId (перший варіант цього кольору)
+              const byColor = new Map<string, number>();
+              for (const v of p.variants) {
+                if (!byColor.has(v.color)) byColor.set(v.color, v.id);
+              }
+              const colors = Array.from(byColor.entries());
+
+              return (
+                <div style={{ marginBottom: 10, fontSize: 13 }}>
+                  <div style={{ marginBottom: 6, color: "#666" }}>
+                    Прив’язати фото до кольору (або лишити “Загальні”):
+                  </div>
+
+                  <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                    <button
+                      type="button"
+                      style={{
+                        ...btnSoft,
+                        background: imgVariantId === null ? "#fff5ea" : "#fff",
+                      }}
+                      onClick={() => setImgVariantId(null)}
+                    >
+                      Загальні
+                    </button>
+
+                    {colors.map(([color, variantId]) => (
+                      <button
+                        key={color}
+                        type="button"
+                        style={{
+                          ...btnSoft,
+                          background:
+                            imgVariantId === variantId ? "#fff5ea" : "#fff",
+                          display: "inline-flex",
+                          alignItems: "center",
+                          gap: 8,
+                        }}
+                        onClick={() => setImgVariantId(variantId)}
+                        title={`variantId: ${variantId}`}
+                      >
+                        <span
+                          style={{
+                            width: 14,
+                            height: 14,
+                            borderRadius: 999,
+                            background: color,
+                            border: "1px solid #ddd",
+                            display: "inline-block",
+                          }}
+                        />
+                        <span style={{ fontSize: 12 }}>{color}</span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              );
+            })()}
+
+            <div
+              style={{
+                display: "flex",
+                gap: 10,
+                flexWrap: "wrap",
+                alignItems: "center",
+              }}
+            >
+              <label style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+                <span style={{ fontSize: 12, color: "#666" }}>SortOrder</span>
+                <input
+                  value={imgSort}
+                  onChange={(e) => setImgSort(e.target.value)}
+                  style={inputSmall}
+                  placeholder="0"
+                />
+              </label>
+
+              <input
+                type="file"
+                accept="image/*"
+                onChange={(e) => setImageFile(e.target.files?.[0] ?? null)}
+              />
+
+              <button type="button" style={btnSoft} onClick={handleUploadAndAttach}>
+                Upload + прикріпити
+              </button>
+
+              <button
+                type="button"
+                style={btnSoft}
+                onClick={() => setSelectedProductId(null)}
+              >
+                Закрити
+              </button>
+            </div>
+
+            <div style={{ marginTop: 10, fontSize: 12, color: "#666" }}>
+              Якщо вибрано <b>Загальні</b> — фото буде показуватись для всіх
+              кольорів (fallback). Якщо вибрано колір — фото піде саме під цей
+              колір.
+            </div>
+          </section>
+        )}
 
         {/* Опційно: дебаг JSON */}
         <section>

@@ -9,6 +9,7 @@ import {
 } from '@nestjs/common';
 import { ProductsService } from './products.service';
 import { CreateProductDto } from './dto/create-product.dto';
+import { AddProductImageDto } from './dto/add-product-image.dto';
 
 @Controller('products')
 export class ProductsController {
@@ -30,6 +31,13 @@ export class ProductsController {
   @Post()
   create(@Body() dto: CreateProductDto) {
     return this.productsService.create(dto);
+  }
+  @Post(':id/images')
+  addImage(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() dto: AddProductImageDto,
+  ) {
+    return this.productsService.addImage(id, dto);
   }
 
   // (update можна зробити потім, можна навіть тимчасово прибрати)
