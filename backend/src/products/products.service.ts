@@ -115,8 +115,9 @@ export class ProductsService {
 
   // Видалення
   remove(id: number) {
-    return this.prisma.product.delete({
+    return this.prisma.product.update({
       where: { id },
+      data: { isActive: false },
     });
   }
 }
