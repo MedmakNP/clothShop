@@ -7,6 +7,7 @@ import BuyersPage from "./Pages/buyersPage";
 import BlogPage from "./Pages/blogPage";
 import ContactsPage from "./Pages/contactsPage";
 import AdminDbPage from "./Pages/adminPage";
+import AdminInventoryPage from "./Pages/AdminInventoryPage";
 import "./i18n";
 import { createHashRouter } from "react-router-dom";
 import ProductPage from "./Pages/product";
@@ -44,6 +45,10 @@ const routerConfig: RouteConfig[] = [
   {
     path: "/admin",
     element: <AdminDbPage />,
+  },
+    {
+    path: "/admin/inventory",
+    element: <AdminInventoryPage  />,
   },
 ];
 
